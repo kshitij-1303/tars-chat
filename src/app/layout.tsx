@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
-import ConvexClientProvider from "./ConvexClientProvider";
+import ConvexClientProvider from "@/components/ConvexClientProvider";
 
 const geist = Geist({ subsets: ["latin"] });
 
