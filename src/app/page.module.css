@@ -1,0 +1,37 @@
+.wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 90vh;
+}
+
+.card {
+     width: 85%;
+  height: 85vh;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+  display: flex;
+  /* background-color: #7b7ec4; */
+}
+
+.pad {
+    padding: 10px
+}
+
+
+.logo {
+  width: 50px;
+  height: 50px;
+
+  background-image: url("/images/app-logo.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+
+  mix-blend-mode: multiply; /* removes white visually */
+}
+
+
+

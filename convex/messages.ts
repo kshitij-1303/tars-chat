@@ -6,7 +6,7 @@ import { v } from "convex/values";
 
 export const sendMessage = mutation({
     args: {
-        consverationId: v.id("conversations"),
+        conversationId: v.id("conversations"),
         content: v.string(),
     },
 
@@ -15,7 +15,7 @@ export const sendMessage = mutation({
         if (!identity) throw new Error("Not authenticated");
 
         await ctx.db.insert("messages", {
-            conversationId: args.consverationId,
+            conversationId: args.conversationId,
             senderId: identity.subject,
             content: args.content,
             isDeleted: false,
@@ -25,7 +25,7 @@ export const sendMessage = mutation({
 
         await ctx.db
             .query("conversations")
-            .filter((q) => q.eq(q.field("_id"), args.consverationId))
+            .filter((q) => q.eq(q.field("_id"), args.conversationId))
             .unique()
             .then((conversation) => {
                 if (conversation) {
@@ -41,21 +41,24 @@ export const sendMessage = mutation({
 // Will populate the screen when chat is opened.
 
 export const getMessages = query({
-    args: {
-        conversationId: v.id("conversations"),
-    },
-    handler: async (ctx, args) => {
-        const identity = await ctx.auth.getUserIdentity();
-        if (!identity) return [];
+  args: {
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
 
-        const messages =  await ctx.db.query("messages").withIndex("by_conversation", (q) =>
-            q.eq("conversationId", args.conversationId))
-            .order("asc");
+    const messages = await ctx.db
+      .query("messages")
+      .withIndex("by_conversation", (q) =>
+        q.eq("conversationId", args.conversationId)
+      )
+      .order("asc")
+      .collect();
 
-        return messages;
-
-    }
-})
+    return messages;
+  },
+});
 
 export const deleteMessage = mutation({
     args: {
