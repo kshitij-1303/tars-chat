@@ -26,7 +26,7 @@ export default defineSchema({
     conversationId: v.id("conversations"),
     userId: v.string(),
     timestamp: v.number(),
-  }).index("by_conversation", ["conversationId"]),
+  }).index("by_conversation", ["conversationId"]).index("by_user_conversation", ["conversationId", "userId"]),
 
   readReceipts: defineTable({
     conversationId: v.id("conversations"),

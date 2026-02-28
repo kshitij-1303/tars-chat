@@ -36,8 +36,7 @@ export const getOrCreateConversation = mutation({
 });
 
 // Fetches all conversations of the current user
-// Find the other person's details and the last message for each convo
-// To populate sidebar
+// Finds the other person's details and the last message for each convo to populate sidebar
 
 export const getMyConversations = query({
   args: {},

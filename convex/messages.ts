@@ -88,26 +88,38 @@ export const setTyping = mutation({
   args: {
     conversationId: v.id("conversations"),
   },
+
   handler: async (ctx, args) => {
+
     const identity = await ctx.auth.getUserIdentity();
+
     if (!identity) return;
 
+    // find existing typing indicator
     const existing = await ctx.db
       .query("typingIndicators")
-      .withIndex("by_conversation", (q) =>
+      .withIndex("by_user_conversation", (q) =>
         q.eq("conversationId", args.conversationId)
+         .eq("userId", identity.subject)
       )
-      .filter((q) => q.eq(q.field("userId"), identity.subject))
       .unique();
 
     if (existing) {
-      await ctx.db.patch(existing._id, { timestamp: Date.now() });
+
+      // UPDATE timestamp (CRITICAL FIX)
+      await ctx.db.patch(existing._id, {
+        timestamp: Date.now(),
+      });
+
     } else {
+
+      // create new indicator
       await ctx.db.insert("typingIndicators", {
         conversationId: args.conversationId,
         userId: identity.subject,
         timestamp: Date.now(),
       });
+
     }
   },
 });
@@ -215,5 +227,27 @@ export const getUnreadCount = query({
     return allMessages.filter(
       (m) => m._creationTime > lastReadTime && m.senderId !== identity.subject
     ).length;
+  },
+});
+
+export const clearTyping = mutation({
+  args: {
+    conversationId: v.id("conversations"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return;
+
+    const existing = await ctx.db
+      .query("typingIndicators")
+      .withIndex("by_user_conversation", (q) =>
+        q.eq("conversationId", args.conversationId)
+         .eq("userId", identity.subject)
+      )
+      .unique();
+
+    if (existing) {
+      await ctx.db.delete(existing._id);
+    }
   },
 });

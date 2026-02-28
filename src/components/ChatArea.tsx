@@ -16,9 +16,11 @@ export default function ChatArea({ conversationId, onBack }: ChatAreaProps) {
   const [messageText, setMessageText] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
+  const [showScrollButton, setShowScrollButton] = useState(false);
 
   const deleteMessage = useMutation(api.messages.deleteMessage);
   const setTyping = useMutation(api.messages.setTyping);
+  const clearTyping = useMutation(api.messages.clearTyping);
 
   const messages = useQuery(
     api.messages.getMessages,
@@ -34,10 +36,28 @@ export default function ChatArea({ conversationId, onBack }: ChatAreaProps) {
   );
 
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+    if (isNearBottom) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
+
+  const handleScroll = () => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+    setShowScrollButton(!isNearBottom);
+  };
+
+  const scrollToBottom = () => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   const handleSend = async () => {
     if (!messageText.trim() || !conversationId) return;
@@ -62,23 +82,27 @@ export default function ChatArea({ conversationId, onBack }: ChatAreaProps) {
 
   return (
     <div
-      className="w-full h-full flex flex-col"
-      style={{
-        backgroundImage: "url('/images/chatarea-bg.png')",
-        backgroundSize: "contain",
-      }}
+      className="
+        w-full h-full flex flex-col
+        bg-[url('/images/chatarea-bg-mobile.png')]
+        md:bg-[url('/images/chatarea-bg.png')]
+        bg-contain
+        bg-repeat
+      "
     >
-
       {/* Mobile Header */}
-      <div className="md:hidden flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-200">
+      <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-0">
         <button onClick={onBack} className="text-[#7b7ec4] text-lg font-bold">
           ←
         </button>
-        <p className="text-sm font-semibold text-gray-800">Back</p>
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto flex flex-col scrollbar-hover">
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto flex flex-col scrollbar-hover"
+      >
         <div className="flex flex-col gap-3 mt-auto px-4 py-4">
 
           {messages?.length === 0 && (
@@ -137,6 +161,18 @@ export default function ChatArea({ conversationId, onBack }: ChatAreaProps) {
         </div>
       </div>
 
+      {/* Scroll to bottom button */}
+      {showScrollButton && (
+        <div className="flex justify-center pb-1">
+          <button
+            onClick={scrollToBottom}
+            className="bg-[#7b7ec4] text-white text-xs px-3 py-1.5 rounded-full shadow-md hover:bg-[#5b5ea6] transition"
+          >
+            ↓ Latest
+          </button>
+        </div>
+      )}
+
       {/* Typing indicator */}
       {typingIndicator && (
         <div className="px-4 py-1 flex items-center gap-2">
@@ -177,7 +213,18 @@ export default function ChatArea({ conversationId, onBack }: ChatAreaProps) {
           value={messageText}
           onChange={(e) => {
             setMessageText(e.target.value);
-            if (conversationId) setTyping({ conversationId });
+
+            if (!conversationId) return;
+
+            setTyping({ conversationId });
+
+            if (typingTimeoutRef.current) {
+              clearTimeout(typingTimeoutRef.current);
+            }
+
+            typingTimeoutRef.current = setTimeout(() => {
+              clearTyping({ conversationId });
+            }, 2000);
           }}
           onKeyDown={handleKeyDown}
           placeholder="Write a message..."

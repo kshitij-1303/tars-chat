@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useState } from "react";
 import { Id } from "../../convex/_generated/dataModel";
+import ConversationItem from "@/components/ConversationItem";
 
 interface SidebarProps {
   onSelectConversation: (id: Id<"conversations">) => void;
@@ -115,41 +116,12 @@ export default function Sidebar({ onSelectConversation, selectedConversationId }
             </div>
           ) : (
             conversations?.map((conversation) => (
-              <div
+              <ConversationItem
                 key={conversation._id}
+                conversation={conversation}
+                isSelected={selectedConversationId === conversation._id}
                 onClick={() => onSelectConversation(conversation._id)}
-                className="flex items-center gap-3 px-4 py-3 cursor-pointer border-b border-gray-100"
-                style={{
-                  background: selectedConversationId === conversation._id ? "#f0f2ff" : "transparent",
-                }}
-                onMouseEnter={(e) => {
-                  if (selectedConversationId !== conversation._id)
-                    e.currentTarget.style.background = "#f0f2ff";
-                }}
-                onMouseLeave={(e) => {
-                  if (selectedConversationId !== conversation._id)
-                    e.currentTarget.style.background = "transparent";
-                }}
-              >
-                <div className="relative">
-                  <img
-                    src={conversation.otherUser?.imageUrl}
-                    alt={conversation.otherUser?.name}
-                    style={{
-                      width: "44px",
-                      height: "44px",
-                      borderRadius: "50%",
-                      objectFit: "cover",
-                    }}
-                  />
-                  {conversation.otherUser?.isOnline && (
-                    <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-white" />
-                  )}
-                </div>
-                <p className="text-sm font-semibold text-gray-800">
-                  {conversation.otherUser?.name}
-                </p>
-              </div>
+              />
             ))
           )}
         </div>
