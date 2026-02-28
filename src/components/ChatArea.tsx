@@ -6,6 +6,7 @@ import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import EmojiPicker from "emoji-picker-react";
 import { formatMessageTime } from "@/utils/formatMessageTime";
+import GroupSettingsModal from "./GroupSettingsModal";
 
 interface ChatAreaProps {
   conversationId: Id<"conversations"> | null;
@@ -17,6 +18,7 @@ export default function ChatArea({ conversationId, onBack }: ChatAreaProps) {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [showGroupSettings, setShowGroupSettings] = useState(false);
 
   const deleteMessage = useMutation(api.messages.deleteMessage);
   const setTyping = useMutation(api.messages.setTyping);
@@ -29,6 +31,8 @@ export default function ChatArea({ conversationId, onBack }: ChatAreaProps) {
 
   const currentUser = useQuery(api.users.getCurrentUser);
   const sendMessage = useMutation(api.messages.sendMessage);
+  const conversations = useQuery(api.conversations.getMyConversations);
+  const activeConversation = conversations?.find((c) => c._id === conversationId);
 
   const typingIndicator = useQuery(
     api.messages.getTypingIndicator,
@@ -72,30 +76,66 @@ export default function ChatArea({ conversationId, onBack }: ChatAreaProps) {
     }
   };
 
+  const isGroup = activeConversation?.isGroup;
+  const displayName = isGroup ? activeConversation?.groupName : activeConversation?.otherUser?.name;
+  const displayImage = isGroup
+    ? (activeConversation?.groupImage || `https://api.dicebear.com/7.x/initials/svg?seed=${activeConversation?.groupName}`)
+    : activeConversation?.otherUser?.imageUrl;
+  const isOnline = !isGroup && activeConversation?.otherUser?.isOnline;
+
   if (!conversationId) {
     return (
-      <div className="bg-[#e6e9ff] w-full h-full flex items-center justify-center text-gray-500 text-sm">
+      <div className="bg-[#e6e9ff] w-full h-full flex items-center justify-center text-gray-500 text-sm bg-no-repeat bg-fixed bg-cover">
         Select a conversation to start chatting
       </div>
     );
   }
 
   return (
-    <div
-      className="
-        w-full h-full flex flex-col
-        bg-[url('/images/chatarea-bg-mobile.png')]
-        md:bg-[url('/images/chatarea-bg.png')]
-        bg-contain
-        bg-repeat
-      "
-    >
-      {/* Mobile Header */}
-      <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-0">
-        <button onClick={onBack} className="text-[#7b7ec4] text-lg font-bold">
+    <div className="w-full h-full flex flex-col bg-[url('/images/chatarea-bg-mobile.png')] md:bg-[url('/images/chatarea-bg.png')] bg-contain bg-repeat">
+
+      {/* Header */}
+      <div
+        className={`flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100 shadow-sm ${isGroup ? "cursor-pointer hover:bg-[#f9f9ff] transition" : ""}`}
+        onClick={() => isGroup && setShowGroupSettings(true)}
+      >
+        <button onClick={(e) => { e.stopPropagation(); onBack(); }} className="md:hidden text-[#7b7ec4] text-lg font-bold mr-1">
           ←
         </button>
+        <div className="relative">
+          <img
+            src={displayImage}
+            alt={displayName}
+            style={{ width: "42px", height: "42px", borderRadius: "50%", objectFit: "cover" }}
+          />
+          {isOnline && (
+            <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-white" />
+          )}
+        </div>
+        <div className="flex flex-col">
+          <p className="text-sm font-semibold text-[#1a1a2e]">{displayName}</p>
+          {!isGroup && (
+            <p className="text-xs text-gray-400">{isOnline ? "Online" : "Offline"}</p>
+          )}
+          {isGroup && (
+            <p className="text-xs text-gray-400">{activeConversation?.participantIds?.length} members · tap to manage</p>
+          )}
+        </div>
       </div>
+
+      {/* Group Settings Modal */}
+      {showGroupSettings && conversationId && isGroup && (
+        <GroupSettingsModal
+          conversationId={conversationId}
+          groupName={activeConversation?.groupName ?? ""}
+          groupImage={activeConversation?.groupImage}
+          onClose={() => setShowGroupSettings(false)}
+          onDeleted={() => {
+            setShowGroupSettings(false);
+            onBack();
+          }}
+        />
+      )}
 
       {/* Messages Area */}
       <div
@@ -104,13 +144,9 @@ export default function ChatArea({ conversationId, onBack }: ChatAreaProps) {
         className="flex-1 overflow-y-auto flex flex-col scrollbar-hover"
       >
         <div className="flex flex-col gap-3 mt-auto px-4 py-4">
-
           {messages?.length === 0 && (
-            <div className="text-center text-gray-500 text-sm">
-              No messages yet 👋
-            </div>
+            <div className="text-center text-gray-500 text-sm">No messages yet 👋</div>
           )}
-
           {messages?.map((message) => {
             const isOwn = message.senderId === currentUser?.clerkId;
             return (
@@ -156,7 +192,6 @@ export default function ChatArea({ conversationId, onBack }: ChatAreaProps) {
               </div>
             );
           })}
-
           <div ref={bottomRef} />
         </div>
       </div>
@@ -187,41 +222,19 @@ export default function ChatArea({ conversationId, onBack }: ChatAreaProps) {
 
       {/* Input Area */}
       <div className="border-t border-gray-200 flex items-center gap-2 px-3 py-2 relative">
-
         {showEmojiPicker && (
-          <div style={{
-            position: "absolute",
-            bottom: "70px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 50,
-          }}>
-            <EmojiPicker
-              onEmojiClick={(emoji) => setMessageText(prev => prev + emoji.emoji)}
-            />
+          <div style={{ position: "absolute", bottom: "70px", left: "50%", transform: "translateX(-50%)", zIndex: 50 }}>
+            <EmojiPicker onEmojiClick={(emoji) => setMessageText(prev => prev + emoji.emoji)} />
           </div>
         )}
-
-        <button
-          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-          className="text-xl"
-        >
-          😊
-        </button>
-
+        <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="text-xl">😊</button>
         <input
           value={messageText}
           onChange={(e) => {
             setMessageText(e.target.value);
-
             if (!conversationId) return;
-
             setTyping({ conversationId });
-
-            if (typingTimeoutRef.current) {
-              clearTimeout(typingTimeoutRef.current);
-            }
-
+            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
             typingTimeoutRef.current = setTimeout(() => {
               clearTyping({ conversationId });
             }, 2000);
@@ -231,7 +244,6 @@ export default function ChatArea({ conversationId, onBack }: ChatAreaProps) {
           className="flex-1 bg-[#f0f2ff] text-[#1a1a2e] outline-none"
           style={{ padding: "10px 14px", borderRadius: "20px" }}
         />
-
         <button
           onClick={handleSend}
           disabled={!messageText.trim()}
@@ -240,7 +252,6 @@ export default function ChatArea({ conversationId, onBack }: ChatAreaProps) {
         >
           ➤
         </button>
-
       </div>
     </div>
   );

@@ -6,7 +6,9 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useState } from "react";
 import { Id } from "../../convex/_generated/dataModel";
-import ConversationItem from "@/components/ConversationItem";
+import ConversationItem from "./ConversationItem";
+import CreateGroupModal from "./CreateGroupModal";
+import { MdOutlineGroupAdd } from "react-icons/md";
 
 interface SidebarProps {
   onSelectConversation: (id: Id<"conversations">) => void;
@@ -20,6 +22,7 @@ export default function Sidebar({ onSelectConversation, selectedConversationId }
   const conversations = useQuery(api.conversations.getMyConversations);
   const getOrCreateConversation = useMutation(api.conversations.getOrCreateConversation);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showGroupModal, setShowGroupModal] = useState(false);
 
   const handleRegenerateAvatar = async () => {
     const newAvatar = generateRandomAvatar();
@@ -38,16 +41,22 @@ export default function Sidebar({ onSelectConversation, selectedConversationId }
       {/* Header */}
       <section className={`${styles.pad} flex justify-between items-center`}>
         <div className={styles.logo}></div>
-        <div className="relative">
+
+      
+
+        <div className="relative flex gap-4 items-center">
+          <button
+          onClick={() => setShowGroupModal(true)}
+          className="w-8 h-8 cursor-pointer rounded-full bg-[#f0f2ff] flex items-center justify-center text-[#7b7ec4] text-lg hover:bg-[#e0e3ff] transition"
+          title="Create group"
+        >
+          <MdOutlineGroupAdd size={44} color="#7b7ec4" />
+
+        </button>
           <img
             src={currentUser?.imageUrl}
             alt="avatar"
-            style={{
-              width: "50px",
-              height: "50px",
-              objectFit: "cover",
-              borderRadius: "50%",
-            }}
+            style={{ width: "50px", height: "50px", objectFit: "cover", borderRadius: "50%" }}
           />
           <button
             onClick={handleRegenerateAvatar}
@@ -88,12 +97,7 @@ export default function Sidebar({ onSelectConversation, selectedConversationId }
                 <img
                   src={u.imageUrl}
                   alt={u.name}
-                  style={{
-                    width: "44px",
-                    height: "44px",
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                  }}
+                  style={{ width: "44px", height: "44px", borderRadius: "50%", objectFit: "cover" }}
                 />
                 {u.isOnline && (
                   <div className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-white" />
@@ -105,7 +109,7 @@ export default function Sidebar({ onSelectConversation, selectedConversationId }
         </div>
       )}
 
-      {/* Conversation list — shows when not searching */}
+      {/* Conversation list */}
       {searchQuery.trim().length === 0 && (
         <div className="flex-1 overflow-y-auto">
           {conversations?.length === 0 ? (
@@ -125,6 +129,14 @@ export default function Sidebar({ onSelectConversation, selectedConversationId }
             ))
           )}
         </div>
+      )}
+
+      {/* Group Modal */}
+      {showGroupModal && (
+        <CreateGroupModal
+          onClose={() => setShowGroupModal(false)}
+          onCreated={(id) => onSelectConversation(id)}
+        />
       )}
 
     </div>

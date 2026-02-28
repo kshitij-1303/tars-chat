@@ -13,6 +13,10 @@ export default defineSchema({
   conversations: defineTable({
     participantIds: v.array(v.string()),
     lastMessageTime: v.number(),
+    isGroup: v.optional(v.boolean()),
+    groupName: v.optional(v.string()),
+    groupImage: v.optional(v.string()),
+    adminIds: v.optional(v.array(v.string())),
   }),
 
   messages: defineTable({
@@ -26,7 +30,9 @@ export default defineSchema({
     conversationId: v.id("conversations"),
     userId: v.string(),
     timestamp: v.number(),
-  }).index("by_conversation", ["conversationId"]).index("by_user_conversation", ["conversationId", "userId"]),
+  })
+    .index("by_conversation", ["conversationId"])
+    .index("by_user_conversation", ["conversationId", "userId"]),
 
   readReceipts: defineTable({
     conversationId: v.id("conversations"),
